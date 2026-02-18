@@ -1,8 +1,3 @@
-# ============================================
-# modulos/ui_cursos.py
-# Ventana 1: gestión de universidades, carreras y cursos
-# ============================================
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -35,9 +30,7 @@ class VentanaCursos(tk.Toplevel):
         cont.columnconfigure(2, weight=2)
         cont.rowconfigure(1, weight=1)
 
-        # =======================
         # UNIVERSIDADES
-        # =======================
         uni_box = ttk.LabelFrame(cont, text="Universidades")
         uni_box.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=(0, 8))
 
@@ -61,9 +54,7 @@ class VentanaCursos(tk.Toplevel):
         self.tree_uni.pack(fill="both", expand=True, padx=8, pady=8)
         self.tree_uni.bind("<<TreeviewSelect>>", lambda e: self.on_uni_select())
 
-        # =======================
         # CARRERAS
-        # =======================
         car_box = ttk.LabelFrame(cont, text="Carreras (de la universidad seleccionada)")
         car_box.grid(row=0, column=1, rowspan=2, sticky="nsew", padx=(0, 8))
 
@@ -87,21 +78,19 @@ class VentanaCursos(tk.Toplevel):
         self.tree_car.pack(fill="both", expand=True, padx=8, pady=8)
         self.tree_car.bind("<<TreeviewSelect>>", lambda e: self.on_car_select())
 
-        # =======================
         # CURSOS
-        # =======================
         curso_box = ttk.LabelFrame(cont, text="Cursos (de la carrera seleccionada)")
         curso_box.grid(row=0, column=2, rowspan=2, sticky="nsew")
 
-        self.var_curso_sem = tk.StringVar()
+        self.var_curso_periodo = tk.StringVar()
         self.var_curso_nombre = tk.StringVar()
         self.var_curso_codigo = tk.StringVar()
 
         frm_c = ttk.Frame(curso_box)
         frm_c.pack(fill="x", padx=8, pady=8)
 
-        ttk.Label(frm_c, text="Semestre:").grid(row=0, column=0, sticky="w")
-        ttk.Entry(frm_c, textvariable=self.var_curso_sem, width=8).grid(row=0, column=1, sticky="w", padx=6)
+        ttk.Label(frm_c, text="Periodo (AAAA-1/2):").grid(row=0, column=0, sticky="w")
+        ttk.Entry(frm_c, textvariable=self.var_curso_periodo, width=12).grid(row=0, column=1, sticky="w", padx=6)
 
         ttk.Label(frm_c, text="Nombre curso:").grid(row=0, column=2, sticky="w")
         ttk.Entry(frm_c, textvariable=self.var_curso_nombre, width=28).grid(row=0, column=3, sticky="w", padx=6)
@@ -115,33 +104,29 @@ class VentanaCursos(tk.Toplevel):
 
         self.tree_curso = ttk.Treeview(
             curso_box,
-            columns=("id", "sem", "nombre", "codigo"),
+            columns=("id", "periodo", "nombre", "codigo"),
             show="headings",
             height=18,
         )
         self.tree_curso.heading("id", text="ID")
-        self.tree_curso.heading("sem", text="Sem")
+        self.tree_curso.heading("periodo", text="Periodo")
         self.tree_curso.heading("nombre", text="Curso")
         self.tree_curso.heading("codigo", text="Código")
 
         self.tree_curso.column("id", width=60, anchor="center")
-        self.tree_curso.column("sem", width=60, anchor="center")
+        self.tree_curso.column("periodo", width=90, anchor="center")
         self.tree_curso.column("nombre", width=360, anchor="w")
         self.tree_curso.column("codigo", width=100, anchor="w")
 
         self.tree_curso.pack(fill="both", expand=True, padx=8, pady=8)
         self.tree_curso.bind("<<TreeviewSelect>>", lambda e: self.on_curso_select())
 
-    # -----------------------------
-    # CARGAS
-    # -----------------------------
     def _cargar_universidades(self):
         for i in self.tree_uni.get_children():
             self.tree_uni.delete(i)
         for u in listar_universidades():
             self.tree_uni.insert("", "end", values=(u["universidad_id"], u["nombre"]))
 
-        # Limpieza dependientes
         self.uni_sel = None
         self.car_sel = None
         self.curso_sel = None
@@ -161,7 +146,7 @@ class VentanaCursos(tk.Toplevel):
         for i in self.tree_curso.get_children():
             self.tree_curso.delete(i)
         for cu in listar_cursos_por_carrera(carrera_id):
-            self.tree_curso.insert("", "end", values=(cu["curso_id"], cu["semestre"], cu["nombre"], cu.get("codigo") or ""))
+            self.tree_curso.insert("", "end", values=(cu["curso_id"], cu["periodo"], cu["nombre"], cu.get("codigo") or ""))
 
         self.curso_sel = None
 
@@ -173,9 +158,6 @@ class VentanaCursos(tk.Toplevel):
         for i in self.tree_curso.get_children():
             self.tree_curso.delete(i)
 
-    # -----------------------------
-    # SELECTS
-    # -----------------------------
     def on_uni_select(self):
         sel = self.tree_uni.selection()
         if not sel:
@@ -183,7 +165,6 @@ class VentanaCursos(tk.Toplevel):
         vals = self.tree_uni.item(sel[0], "values")
         self.uni_sel = int(vals[0])
         self.var_uni_nombre.set(vals[1])
-
         self._cargar_carreras(self.uni_sel)
 
     def on_car_select(self):
@@ -193,7 +174,6 @@ class VentanaCursos(tk.Toplevel):
         vals = self.tree_car.item(sel[0], "values")
         self.car_sel = int(vals[0])
         self.var_car_nombre.set(vals[1])
-
         self._cargar_cursos(self.car_sel)
 
     def on_curso_select(self):
@@ -202,13 +182,10 @@ class VentanaCursos(tk.Toplevel):
             return
         vals = self.tree_curso.item(sel[0], "values")
         self.curso_sel = int(vals[0])
-        self.var_curso_sem.set(vals[1])
+        self.var_curso_periodo.set(vals[1])
         self.var_curso_nombre.set(vals[2])
         self.var_curso_codigo.set(vals[3])
 
-    # -----------------------------
-    # CRUD UNIVERSIDAD
-    # -----------------------------
     def on_uni_agregar(self):
         try:
             crear_universidad(self.var_uni_nombre.get())
@@ -231,7 +208,7 @@ class VentanaCursos(tk.Toplevel):
         if self.uni_sel is None:
             messagebox.showwarning("Atención", "Seleccione una universidad.")
             return
-        if not messagebox.askyesno("Confirmar", "¿Eliminar universidad? (Si tiene carreras asociadas, fallará)"):
+        if not messagebox.askyesno("Confirmar", "¿Eliminar universidad?"):
             return
         try:
             eliminar_universidad(self.uni_sel)
@@ -240,9 +217,6 @@ class VentanaCursos(tk.Toplevel):
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
-    # -----------------------------
-    # CRUD CARRERA
-    # -----------------------------
     def on_car_agregar(self):
         if self.uni_sel is None:
             messagebox.showwarning("Atención", "Seleccione una universidad primero.")
@@ -268,7 +242,7 @@ class VentanaCursos(tk.Toplevel):
         if self.car_sel is None:
             messagebox.showwarning("Atención", "Seleccione una carrera.")
             return
-        if not messagebox.askyesno("Confirmar", "¿Eliminar carrera? (Si tiene cursos/alumnos, fallará)"):
+        if not messagebox.askyesno("Confirmar", "¿Eliminar carrera?"):
             return
         try:
             eliminar_carrera(self.car_sel)
@@ -277,16 +251,13 @@ class VentanaCursos(tk.Toplevel):
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
-    # -----------------------------
-    # CRUD CURSO
-    # -----------------------------
     def on_curso_agregar(self):
         if self.car_sel is None:
             messagebox.showwarning("Atención", "Seleccione una carrera primero.")
             return
         try:
-            crear_curso(self.car_sel, self.var_curso_sem.get(), self.var_curso_nombre.get(), self.var_curso_codigo.get())
-            self.var_curso_sem.set("")
+            crear_curso(self.car_sel, self.var_curso_periodo.get(), self.var_curso_nombre.get(), self.var_curso_codigo.get())
+            self.var_curso_periodo.set("")
             self.var_curso_nombre.set("")
             self.var_curso_codigo.set("")
             self._cargar_cursos(self.car_sel)
@@ -298,7 +269,7 @@ class VentanaCursos(tk.Toplevel):
             messagebox.showwarning("Atención", "Seleccione un curso.")
             return
         try:
-            actualizar_curso(self.curso_sel, self.car_sel, self.var_curso_sem.get(), self.var_curso_nombre.get(), self.var_curso_codigo.get())
+            actualizar_curso(self.curso_sel, self.car_sel, self.var_curso_periodo.get(), self.var_curso_nombre.get(), self.var_curso_codigo.get())
             self._cargar_cursos(self.car_sel)
         except Exception as e:
             messagebox.showerror("Error", str(e))
@@ -307,11 +278,11 @@ class VentanaCursos(tk.Toplevel):
         if self.curso_sel is None:
             messagebox.showwarning("Atención", "Seleccione un curso.")
             return
-        if not messagebox.askyesno("Confirmar", "¿Eliminar curso? (Si tiene inscripciones/evaluaciones fallará)"):
+        if not messagebox.askyesno("Confirmar", "¿Eliminar curso?"):
             return
         try:
             eliminar_curso(self.curso_sel)
-            self.var_curso_sem.set("")
+            self.var_curso_periodo.set("")
             self.var_curso_nombre.set("")
             self.var_curso_codigo.set("")
             self._cargar_cursos(self.car_sel)

@@ -1,12 +1,5 @@
-# ============================================
-# modulos/bd_sqlite.py
-# Conexión SQLite + creación de tablas (init)
-# ============================================
-
 import sqlite3
-
 from .config import ruta_db
-
 
 SQL_INIT = """
 PRAGMA foreign_keys = ON;
@@ -26,19 +19,21 @@ CREATE TABLE IF NOT EXISTS carreras (
 
 CREATE INDEX IF NOT EXISTS idx_carreras_universidad ON carreras(universidad_id);
 
+-- ✅ periodo "AAAA-1" o "AAAA-2"
 CREATE TABLE IF NOT EXISTS cursos (
     curso_id     INTEGER PRIMARY KEY AUTOINCREMENT,
     carrera_id   INTEGER NOT NULL,
-    semestre     INTEGER NOT NULL CHECK (semestre >= 1 AND semestre <= 20),
+    periodo      TEXT NOT NULL CHECK (periodo GLOB '[0-9][0-9][0-9][0-9]-[12]'),
     nombre       TEXT NOT NULL,
     codigo       TEXT,
-    UNIQUE(carrera_id, semestre, nombre),
+    UNIQUE(carrera_id, periodo, nombre),
     FOREIGN KEY (carrera_id) REFERENCES carreras(carrera_id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_cursos_carrera ON cursos(carrera_id);
-CREATE INDEX IF NOT EXISTS idx_cursos_semestre ON cursos(semestre);
+CREATE INDEX IF NOT EXISTS idx_cursos_periodo ON cursos(periodo);
 
+-- ✅ periodo "AAAA-1" o "AAAA-2"
 CREATE TABLE IF NOT EXISTS alumnos (
     alumno_id        INTEGER PRIMARY KEY AUTOINCREMENT,
     tipo_alumno      TEXT NOT NULL CHECK (tipo_alumno IN ('Pregrado','Postgrado','Intercambio')),
@@ -50,7 +45,7 @@ CREATE TABLE IF NOT EXISTS alumnos (
     telefono         TEXT,
     universidad_id   INTEGER NOT NULL,
     carrera_id       INTEGER NOT NULL,
-    semestre         INTEGER NOT NULL CHECK (semestre >= 1 AND semestre <= 20),
+    periodo          TEXT NOT NULL CHECK (periodo GLOB '[0-9][0-9][0-9][0-9]-[12]'),
     estado           INTEGER NOT NULL DEFAULT 1 CHECK (estado IN (0,1)),
     nombre_busqueda  TEXT NOT NULL,
     fecha_registro   TEXT NOT NULL DEFAULT (datetime('now')),
@@ -62,6 +57,7 @@ CREATE TABLE IF NOT EXISTS alumnos (
 CREATE INDEX IF NOT EXISTS idx_alumnos_nombre ON alumnos(nombre_busqueda);
 CREATE INDEX IF NOT EXISTS idx_alumnos_carrera ON alumnos(carrera_id);
 CREATE INDEX IF NOT EXISTS idx_alumnos_universidad ON alumnos(universidad_id);
+CREATE INDEX IF NOT EXISTS idx_alumnos_periodo ON alumnos(periodo);
 
 CREATE TRIGGER IF NOT EXISTS trg_alumnos_fecha
 AFTER UPDATE ON alumnos
@@ -130,22 +126,13 @@ LEFT JOIN notas n ON n.inscripcion_id = i.inscripcion_id AND n.evaluacion_id = e
 GROUP BY i.inscripcion_id, i.alumno_id, i.curso_id;
 """
 
-
 def obtener_conexion() -> sqlite3.Connection:
-    """
-    Abre una conexión a SQLite.
-    - row_factory = sqlite3.Row permite acceder por nombre de columna.
-    """
     conn = sqlite3.connect(ruta_db())
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")
     return conn
 
-
 def inicializar_bd() -> None:
-    """
-    Crea tablas/vistas si no existen.
-    """
     conn = obtener_conexion()
     try:
         conn.executescript(SQL_INIT)

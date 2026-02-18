@@ -1,20 +1,12 @@
-# ============================================
-# modulos/repo_alumnos.py
-# CRUD de alumnos + búsqueda
-# ============================================
-
 from typing import Any, Dict, List, Optional
 from .bd_sqlite import obtener_conexion
-from .validaciones import normalizar_texto, rut_a_normalizado, nombre_busqueda, validar_semestre
+from .validaciones import normalizar_texto, rut_a_normalizado, nombre_busqueda, validar_periodo
 from .repo_logs import registrar_evento
-
 
 def _fila_a_dict(fila) -> Dict[str, Any]:
     return dict(fila) if fila else {}
 
-
 def listar_alumnos() -> List[Dict[str, Any]]:
-    """Lista alumnos (más nuevos primero)."""
     conn = obtener_conexion()
     try:
         cur = conn.cursor()
@@ -33,9 +25,7 @@ def listar_alumnos() -> List[Dict[str, Any]]:
     finally:
         conn.close()
 
-
 def buscar_alumnos(texto: str) -> List[Dict[str, Any]]:
-    """Busca por nombre, rut normalizado o email."""
     q = normalizar_texto(texto).casefold()
     if not q:
         return listar_alumnos()
@@ -64,7 +54,6 @@ def buscar_alumnos(texto: str) -> List[Dict[str, Any]]:
     finally:
         conn.close()
 
-
 def obtener_alumno(alumno_id: int) -> Optional[Dict[str, Any]]:
     conn = obtener_conexion()
     try:
@@ -75,11 +64,7 @@ def obtener_alumno(alumno_id: int) -> Optional[Dict[str, Any]]:
     finally:
         conn.close()
 
-
 def crear_alumno(datos: Dict[str, Any]) -> int:
-    """
-    Crea alumno validando campos principales.
-    """
     tipo = normalizar_texto(datos.get("tipo_alumno"))
     if tipo not in ("Pregrado", "Postgrado", "Intercambio"):
         raise ValueError("tipo_alumno debe ser Pregrado, Postgrado o Intercambio.")
@@ -99,10 +84,10 @@ def crear_alumno(datos: Dict[str, Any]) -> int:
 
     universidad_id = int(datos.get("universidad_id"))
     carrera_id = int(datos.get("carrera_id"))
-    semestre = validar_semestre(datos.get("semestre"))
+
+    periodo = validar_periodo(datos.get("periodo"))
 
     estado = 1 if int(datos.get("estado", 1)) == 1 else 0
-
     nb = nombre_busqueda(nombres, apellidos)
 
     conn = obtener_conexion()
@@ -114,7 +99,7 @@ def crear_alumno(datos: Dict[str, Any]) -> int:
                 tipo_alumno, rut, rut_normalizado,
                 nombres, apellidos,
                 email, telefono,
-                universidad_id, carrera_id, semestre,
+                universidad_id, carrera_id, periodo,
                 estado, nombre_busqueda
             ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
             """,
@@ -123,20 +108,18 @@ def crear_alumno(datos: Dict[str, Any]) -> int:
                 nombres, apellidos,
                 (email if email else None),
                 (telefono if telefono else None),
-                universidad_id, carrera_id, semestre,
+                universidad_id, carrera_id, periodo,
                 estado, nb,
             ),
         )
         conn.commit()
         aid = int(cur.lastrowid)
-        registrar_evento("alumnos", "CREAR", f"alumno_id={aid} rut='{rut}'")
+        registrar_evento("alumnos", "CREAR", f"alumno_id={aid} rut='{rut}' periodo={periodo}")
         return aid
     finally:
         conn.close()
 
-
 def actualizar_alumno(alumno_id: int, datos: Dict[str, Any]) -> bool:
-    """Actualiza alumno."""
     tipo = normalizar_texto(datos.get("tipo_alumno"))
     if tipo not in ("Pregrado", "Postgrado", "Intercambio"):
         raise ValueError("tipo_alumno debe ser Pregrado, Postgrado o Intercambio.")
@@ -156,10 +139,10 @@ def actualizar_alumno(alumno_id: int, datos: Dict[str, Any]) -> bool:
 
     universidad_id = int(datos.get("universidad_id"))
     carrera_id = int(datos.get("carrera_id"))
-    semestre = validar_semestre(datos.get("semestre"))
+
+    periodo = validar_periodo(datos.get("periodo"))
 
     estado = 1 if int(datos.get("estado", 1)) == 1 else 0
-
     nb = nombre_busqueda(nombres, apellidos)
 
     conn = obtener_conexion()
@@ -172,7 +155,7 @@ def actualizar_alumno(alumno_id: int, datos: Dict[str, Any]) -> bool:
                 rut=?, rut_normalizado=?,
                 nombres=?, apellidos=?,
                 email=?, telefono=?,
-                universidad_id=?, carrera_id=?, semestre=?,
+                universidad_id=?, carrera_id=?, periodo=?,
                 estado=?, nombre_busqueda=?
             WHERE alumno_id=?
             """,
@@ -182,7 +165,7 @@ def actualizar_alumno(alumno_id: int, datos: Dict[str, Any]) -> bool:
                 nombres, apellidos,
                 (email if email else None),
                 (telefono if telefono else None),
-                universidad_id, carrera_id, semestre,
+                universidad_id, carrera_id, periodo,
                 estado, nb,
                 int(alumno_id),
             ),
@@ -190,14 +173,12 @@ def actualizar_alumno(alumno_id: int, datos: Dict[str, Any]) -> bool:
         conn.commit()
         ok = cur.rowcount > 0
         if ok:
-            registrar_evento("alumnos", "ACTUALIZAR", f"alumno_id={alumno_id}")
+            registrar_evento("alumnos", "ACTUALIZAR", f"alumno_id={alumno_id} periodo={periodo}")
         return ok
     finally:
         conn.close()
 
-
 def eliminar_alumno(alumno_id: int) -> bool:
-    """Elimina alumno (borra también inscripciones y notas por cascada)."""
     conn = obtener_conexion()
     try:
         cur = conn.cursor()

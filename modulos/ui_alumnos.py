@@ -1,8 +1,3 @@
-# ============================================
-# modulos/ui_alumnos.py
-# Ventana 2: CRUD alumnos + búsqueda + combos universidad/carrera
-# ============================================
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -26,7 +21,6 @@ class VentanaAlumnos(tk.Toplevel):
         self._cargar_tabla(listar_alumnos())
 
     def _crear_ui(self):
-        # Barra buscar
         barra = ttk.Frame(self)
         barra.pack(fill="x", padx=10, pady=8)
 
@@ -39,7 +33,6 @@ class VentanaAlumnos(tk.Toplevel):
         ttk.Button(barra, text="Buscar", command=self.on_buscar).pack(side="left", padx=4)
         ttk.Button(barra, text="Ver todo", command=self.on_ver_todo).pack(side="left", padx=4)
 
-        # Contenedor
         cont = ttk.Frame(self)
         cont.pack(fill="both", expand=True, padx=10, pady=8)
 
@@ -47,7 +40,6 @@ class VentanaAlumnos(tk.Toplevel):
         cont.columnconfigure(1, weight=2)
         cont.rowconfigure(0, weight=1)
 
-        # Formulario
         frm = ttk.LabelFrame(cont, text="Formulario Alumno")
         frm.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         frm.columnconfigure(1, weight=1)
@@ -58,9 +50,11 @@ class VentanaAlumnos(tk.Toplevel):
         self.var_apellidos = tk.StringVar()
         self.var_email = tk.StringVar()
         self.var_tel = tk.StringVar()
-        self.var_sem = tk.StringVar(value="1")
-        self.var_estado = tk.IntVar(value=1)
 
+        # ✅ periodo "AAAA-1" o "AAAA-2"
+        self.var_periodo = tk.StringVar(value="2026-1")
+
+        self.var_estado = tk.IntVar(value=1)
         self.var_uni = tk.StringVar()
         self.var_car = tk.StringVar()
 
@@ -102,13 +96,12 @@ class VentanaAlumnos(tk.Toplevel):
         self.cmb_car.grid(row=r, column=1, sticky="ew", padx=8, pady=6)
 
         r += 1
-        ttk.Label(frm, text="Semestre:").grid(row=r, column=0, sticky="w", padx=8, pady=6)
-        ttk.Entry(frm, textvariable=self.var_sem).grid(row=r, column=1, sticky="ew", padx=8, pady=6)
+        ttk.Label(frm, text="Periodo (AAAA-1/2):").grid(row=r, column=0, sticky="w", padx=8, pady=6)
+        ttk.Entry(frm, textvariable=self.var_periodo).grid(row=r, column=1, sticky="ew", padx=8, pady=6)
 
         r += 1
         ttk.Checkbutton(frm, text="Activo", variable=self.var_estado).grid(row=r, column=0, columnspan=2, sticky="w", padx=8, pady=6)
 
-        # Botones
         r += 1
         btns = ttk.Frame(frm)
         btns.grid(row=r, column=0, columnspan=2, sticky="ew", padx=8, pady=10)
@@ -118,13 +111,12 @@ class VentanaAlumnos(tk.Toplevel):
         ttk.Button(btns, text="Eliminar", command=self.on_eliminar).pack(side="left", padx=4)
         ttk.Button(btns, text="Limpiar", command=self.on_limpiar).pack(side="left", padx=4)
 
-        # Tabla
         tabla = ttk.LabelFrame(cont, text="Listado de Alumnos")
         tabla.grid(row=0, column=1, sticky="nsew")
         tabla.rowconfigure(0, weight=1)
         tabla.columnconfigure(0, weight=1)
 
-        cols = ("id", "rut", "nombre", "email", "uni", "car", "sem", "tipo", "estado")
+        cols = ("id", "rut", "nombre", "email", "uni", "car", "periodo", "tipo", "estado")
         self.tree = ttk.Treeview(tabla, columns=cols, show="headings")
         for c, t in [
             ("id", "ID"),
@@ -133,7 +125,7 @@ class VentanaAlumnos(tk.Toplevel):
             ("email", "Email"),
             ("uni", "Universidad"),
             ("car", "Carrera"),
-            ("sem", "Sem"),
+            ("periodo", "Periodo"),
             ("tipo", "Tipo"),
             ("estado", "Activo"),
         ]:
@@ -145,7 +137,7 @@ class VentanaAlumnos(tk.Toplevel):
         self.tree.column("email", width=180, anchor="w")
         self.tree.column("uni", width=180, anchor="w")
         self.tree.column("car", width=180, anchor="w")
-        self.tree.column("sem", width=60, anchor="center")
+        self.tree.column("periodo", width=90, anchor="center")
         self.tree.column("tipo", width=110, anchor="center")
         self.tree.column("estado", width=70, anchor="center")
 
@@ -157,9 +149,6 @@ class VentanaAlumnos(tk.Toplevel):
 
         self.tree.bind("<<TreeviewSelect>>", lambda e: self.on_select())
 
-    # -----------------------
-    # Combos
-    # -----------------------
     def _cargar_universidades(self):
         self._unis = listar_universidades()
         nombres = [u["nombre"] for u in self._unis]
@@ -181,9 +170,6 @@ class VentanaAlumnos(tk.Toplevel):
         self.cmb_car["values"] = nombres
         self.var_car.set(nombres[0] if nombres else "")
 
-    # -----------------------
-    # Tabla
-    # -----------------------
     def _cargar_tabla(self, registros):
         for i in self.tree.get_children():
             self.tree.delete(i)
@@ -200,15 +186,12 @@ class VentanaAlumnos(tk.Toplevel):
                     a.get("email", "") or "",
                     a.get("universidad_nombre", ""),
                     a.get("carrera_nombre", ""),
-                    a.get("semestre", ""),
+                    a.get("periodo", ""),
                     a.get("tipo_alumno", ""),
                     a.get("estado", ""),
                 ),
             )
 
-    # -----------------------
-    # Eventos
-    # -----------------------
     def on_buscar(self):
         self._cargar_tabla(buscar_alumnos(self.var_buscar.get()))
 
@@ -217,7 +200,6 @@ class VentanaAlumnos(tk.Toplevel):
         self._cargar_tabla(listar_alumnos())
 
     def _leer_form(self):
-        # Mapear nombres a IDs
         uni_name = self.var_uni.get()
         uni_id = next((u["universidad_id"] for u in self._unis if u["nombre"] == uni_name), None)
 
@@ -238,7 +220,7 @@ class VentanaAlumnos(tk.Toplevel):
             "telefono": self.var_tel.get(),
             "universidad_id": uni_id,
             "carrera_id": car_id,
-            "semestre": self.var_sem.get(),
+            "periodo": self.var_periodo.get(),
             "estado": self.var_estado.get(),
         }
 
@@ -270,7 +252,7 @@ class VentanaAlumnos(tk.Toplevel):
         if self.alumno_sel is None:
             messagebox.showwarning("Atención", "Seleccione un alumno.")
             return
-        if not messagebox.askyesno("Confirmar", "¿Eliminar alumno? (Borra sus inscripciones/notas)"):
+        if not messagebox.askyesno("Confirmar", "¿Eliminar alumno?"):
             return
         try:
             eliminar_alumno(self.alumno_sel)
@@ -288,7 +270,7 @@ class VentanaAlumnos(tk.Toplevel):
         self.var_apellidos.set("")
         self.var_email.set("")
         self.var_tel.set("")
-        self.var_sem.set("1")
+        self.var_periodo.set("2026-1")
         self.var_estado.set(1)
 
     def on_select(self):
@@ -310,14 +292,12 @@ class VentanaAlumnos(tk.Toplevel):
         self.var_apellidos.set(a.get("apellidos", ""))
         self.var_email.set(a.get("email") or "")
         self.var_tel.set(a.get("telefono") or "")
-        self.var_sem.set(str(a.get("semestre", 1)))
+        self.var_periodo.set(a.get("periodo") or "2026-1")
         self.var_estado.set(int(a.get("estado", 1)))
 
-        # Set combos uni/carrera según IDs
         uni_id = a.get("universidad_id")
         car_id = a.get("carrera_id")
 
-        # Cambiar universidad por nombre (dispara carga carreras)
         uni_name = next((u["nombre"] for u in self._unis if u["universidad_id"] == uni_id), "")
         self.var_uni.set(uni_name)
         self._cargar_carreras()

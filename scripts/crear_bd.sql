@@ -1,16 +1,10 @@
 PRAGMA foreign_keys = ON;
 
--- =========================
--- TABLA: universidades
--- =========================
 CREATE TABLE IF NOT EXISTS universidades (
     universidad_id  INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre          TEXT NOT NULL UNIQUE
 );
 
--- =========================
--- TABLA: carreras
--- =========================
 CREATE TABLE IF NOT EXISTS carreras (
     carrera_id       INTEGER PRIMARY KEY AUTOINCREMENT,
     universidad_id   INTEGER NOT NULL,
@@ -21,25 +15,21 @@ CREATE TABLE IF NOT EXISTS carreras (
 
 CREATE INDEX IF NOT EXISTS idx_carreras_universidad ON carreras(universidad_id);
 
--- =========================
--- TABLA: cursos
--- =========================
+-- ✅ CAMBIO: semestre(int) -> periodo(TEXT "AAAA-1" / "AAAA-2")
 CREATE TABLE IF NOT EXISTS cursos (
     curso_id     INTEGER PRIMARY KEY AUTOINCREMENT,
     carrera_id   INTEGER NOT NULL,
-    semestre     INTEGER NOT NULL CHECK (semestre >= 1 AND semestre <= 20),
+    periodo      TEXT NOT NULL CHECK (periodo GLOB '[0-9][0-9][0-9][0-9]-[12]'),
     nombre       TEXT NOT NULL,
     codigo       TEXT,
-    UNIQUE(carrera_id, semestre, nombre),
+    UNIQUE(carrera_id, periodo, nombre),
     FOREIGN KEY (carrera_id) REFERENCES carreras(carrera_id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_cursos_carrera ON cursos(carrera_id);
-CREATE INDEX IF NOT EXISTS idx_cursos_semestre ON cursos(semestre);
+CREATE INDEX IF NOT EXISTS idx_cursos_periodo ON cursos(periodo);
 
--- =========================
--- TABLA: alumnos
--- =========================
+-- ✅ CAMBIO: semestre(int) -> periodo(TEXT "AAAA-1" / "AAAA-2")
 CREATE TABLE IF NOT EXISTS alumnos (
     alumno_id        INTEGER PRIMARY KEY AUTOINCREMENT,
 
@@ -57,7 +47,7 @@ CREATE TABLE IF NOT EXISTS alumnos (
 
     universidad_id   INTEGER NOT NULL,
     carrera_id       INTEGER NOT NULL,
-    semestre         INTEGER NOT NULL CHECK (semestre >= 1 AND semestre <= 20),
+    periodo          TEXT NOT NULL CHECK (periodo GLOB '[0-9][0-9][0-9][0-9]-[12]'),
 
     estado           INTEGER NOT NULL DEFAULT 1 CHECK (estado IN (0,1)),
     nombre_busqueda  TEXT NOT NULL,
@@ -72,6 +62,7 @@ CREATE TABLE IF NOT EXISTS alumnos (
 CREATE INDEX IF NOT EXISTS idx_alumnos_nombre ON alumnos(nombre_busqueda);
 CREATE INDEX IF NOT EXISTS idx_alumnos_carrera ON alumnos(carrera_id);
 CREATE INDEX IF NOT EXISTS idx_alumnos_universidad ON alumnos(universidad_id);
+CREATE INDEX IF NOT EXISTS idx_alumnos_periodo ON alumnos(periodo);
 
 CREATE TRIGGER IF NOT EXISTS trg_alumnos_fecha
 AFTER UPDATE ON alumnos
@@ -82,9 +73,6 @@ BEGIN
     WHERE alumno_id = OLD.alumno_id;
 END;
 
--- =========================
--- TABLA: inscripciones (alumno<->curso)
--- =========================
 CREATE TABLE IF NOT EXISTS inscripciones (
     inscripcion_id INTEGER PRIMARY KEY AUTOINCREMENT,
     alumno_id      INTEGER NOT NULL,
@@ -97,9 +85,6 @@ CREATE TABLE IF NOT EXISTS inscripciones (
 CREATE INDEX IF NOT EXISTS idx_insc_alumno ON inscripciones(alumno_id);
 CREATE INDEX IF NOT EXISTS idx_insc_curso ON inscripciones(curso_id);
 
--- =========================
--- TABLA: evaluaciones (por curso)
--- =========================
 CREATE TABLE IF NOT EXISTS evaluaciones (
     evaluacion_id INTEGER PRIMARY KEY AUTOINCREMENT,
     curso_id      INTEGER NOT NULL,
@@ -111,9 +96,6 @@ CREATE TABLE IF NOT EXISTS evaluaciones (
 
 CREATE INDEX IF NOT EXISTS idx_eval_curso ON evaluaciones(curso_id);
 
--- =========================
--- TABLA: notas (por inscripción + evaluación)
--- =========================
 CREATE TABLE IF NOT EXISTS notas (
     nota_id        INTEGER PRIMARY KEY AUTOINCREMENT,
     inscripcion_id INTEGER NOT NULL,
@@ -127,9 +109,6 @@ CREATE TABLE IF NOT EXISTS notas (
 CREATE INDEX IF NOT EXISTS idx_notas_insc ON notas(inscripcion_id);
 CREATE INDEX IF NOT EXISTS idx_notas_eval ON notas(evaluacion_id);
 
--- =========================
--- TABLA: logs_eventos
--- =========================
 CREATE TABLE IF NOT EXISTS logs_eventos (
     log_id      INTEGER PRIMARY KEY AUTOINCREMENT,
     fecha_hora  TEXT NOT NULL DEFAULT (datetime('now')),
@@ -139,9 +118,6 @@ CREATE TABLE IF NOT EXISTS logs_eventos (
     nivel       TEXT NOT NULL DEFAULT 'INFO' CHECK (nivel IN ('INFO','WARN','ERROR'))
 );
 
--- =========================
--- VISTA: promedio ponderado por inscripción
--- =========================
 CREATE VIEW IF NOT EXISTS vw_promedios_ponderados AS
 SELECT
     i.inscripcion_id,
