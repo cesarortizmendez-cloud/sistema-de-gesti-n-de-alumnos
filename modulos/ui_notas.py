@@ -1,11 +1,3 @@
-# ============================================
-# modulos/ui_notas.py
-# Ventana 4 (refactor):
-# - Notas se ingresan y ven en UNA SOLA TABLA (Treeview)
-# - Doble click sobre "Nota" para editar dentro de la tabla
-# - Exporta TODAS las notas a Excel/PDF
-# ============================================
-
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
@@ -31,27 +23,50 @@ class VentanaNotas(tk.Toplevel):
     def __init__(self, master):
         super().__init__(master)
 
-        self.title("Notas - Tabla única / Promedio / Exportación completa")
-        self.geometry("1280x700")
-        self.minsize(1200, 640)
+        self.title("Notas - Ingreso y Promedio")
+        self.geometry("1280x720")
+        self.minsize(1200, 660)
 
-        # IDs seleccionados
         self.curso_sel = None
         self.inscripcion_sel = None
 
-        # Para edición “in-place” en Treeview
+        # Editor in-place (doble click)
         self._editor_entry = None
         self._editor_item = None
-        self._editor_col = None
+
+        # Panel casillas
+        self.var_eval_nombre = tk.StringVar()
+        self.var_eval_porcentaje = tk.StringVar()
+        self.var_nota = tk.StringVar()
 
         self._crear_ui()
         self._cargar_cursos()
 
     # ---------------------------------------------------------
+    # Ajuste columnas: 1/3 - 1/3 - 1/3
+    # ---------------------------------------------------------
+    def _ajustar_columnas_notas(self):
+        """
+        Ajusta las 3 columnas del Treeview a partes iguales (1/3 cada una).
+        Se ejecuta al dibujar y cuando la tabla cambia de tamaño.
+        """
+        total = self.tree_notas.winfo_width()
+        if total <= 1:
+            return  # Aún no está dibujado
+
+        w = total // 3
+        w_eval = w
+        w_por = w
+        w_not = total - (w_eval + w_por)  # el resto para cuadrar exacto
+
+        self.tree_notas.column("evaluacion", width=w_eval, stretch=True)
+        self.tree_notas.column("porcentaje", width=w_por, stretch=True)
+        self.tree_notas.column("nota", width=w_not, stretch=True)
+
+    # ---------------------------------------------------------
     # UI
     # ---------------------------------------------------------
     def _crear_ui(self):
-        # Barra superior: curso + acciones
         top = ttk.Frame(self)
         top.pack(fill="x", padx=10, pady=10)
 
@@ -69,17 +84,16 @@ class VentanaNotas(tk.Toplevel):
 
         ttk.Separator(top, orient="vertical").pack(side="left", fill="y", padx=10)
 
-        ttk.Button(top, text="Exportar Excel (todas las notas)", command=self.on_exportar_excel).pack(side="left", padx=6)
-        ttk.Button(top, text="Exportar PDF (todas las notas)", command=self.on_exportar_pdf).pack(side="left", padx=6)
+        ttk.Button(top, text="Exportar Excel", command=self.on_exportar_excel).pack(side="left", padx=6)
+        ttk.Button(top, text="Exportar PDF", command=self.on_exportar_pdf).pack(side="left", padx=6)
 
-        # Contenedor principal
         cont = ttk.Frame(self)
         cont.pack(fill="both", expand=True, padx=10, pady=10)
         cont.columnconfigure(0, weight=2)
         cont.columnconfigure(1, weight=3)
         cont.rowconfigure(0, weight=1)
 
-        # Izquierda: alumnos inscritos
+        # ---------------- IZQUIERDA: INSCRITOS ----------------
         izq = ttk.LabelFrame(cont, text="Alumnos inscritos")
         izq.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         izq.rowconfigure(0, weight=1)
@@ -103,73 +117,122 @@ class VentanaNotas(tk.Toplevel):
 
         self.tree_insc.column("insc", width=70, anchor="center")
         self.tree_insc.column("rut", width=120, anchor="w")
-        self.tree_insc.column("alumno", width=230, anchor="w")
+        self.tree_insc.column("alumno", width=240, anchor="w")
         self.tree_insc.column("email", width=170, anchor="w")
         self.tree_insc.column("prom", width=90, anchor="center")
         self.tree_insc.column("sum", width=80, anchor="center")
 
         sb1 = ttk.Scrollbar(izq, orient="vertical", command=self.tree_insc.yview)
         self.tree_insc.configure(yscrollcommand=sb1.set)
-
         self.tree_insc.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
         sb1.grid(row=0, column=1, sticky="ns")
 
         self.tree_insc.bind("<<TreeviewSelect>>", lambda e: self.on_select_inscrito())
 
-        # Derecha: tabla única de notas
+        # ---------------- DERECHA: NOTAS ----------------
         der = ttk.LabelFrame(cont, text="Tabla de notas del alumno seleccionado")
         der.grid(row=0, column=1, sticky="nsew")
-        der.rowconfigure(1, weight=1)
         der.columnconfigure(0, weight=1)
+        der.rowconfigure(1, weight=1)
 
         self.lbl_alumno = ttk.Label(der, text="Seleccione un alumno inscrito.", font=("Segoe UI", 11, "bold"))
         self.lbl_alumno.grid(row=0, column=0, sticky="w", padx=10, pady=10)
 
+        # Treeview con 3 columnas visibles (Evaluación / % / Nota)
+        # El evaluacion_id se guarda como IID del item (no se muestra como columna)
         self.tree_notas = ttk.Treeview(
             der,
-            columns=("eval_id", "evaluacion", "porcentaje", "nota"),
+            columns=("evaluacion", "porcentaje", "nota"),
             show="headings",
             selectmode="browse",
         )
-        self.tree_notas.heading("eval_id", text="EvalID")
         self.tree_notas.heading("evaluacion", text="Evaluación")
         self.tree_notas.heading("porcentaje", text="%")
         self.tree_notas.heading("nota", text="Nota")
 
-        # Ocultamos eval_id (solo interno)
-        self.tree_notas.column("eval_id", width=0, stretch=False)
-        self.tree_notas.column("evaluacion", width=420, anchor="w")
-        self.tree_notas.column("porcentaje", width=80, anchor="center")
-        self.tree_notas.column("nota", width=80, anchor="center")
+        # Nota: aquí los widths iniciales son “provisorios”, luego se auto-ajustan a 1/3
+        self.tree_notas.column("evaluacion", width=200, anchor="w")
+        self.tree_notas.column("porcentaje", width=100, anchor="center")
+        self.tree_notas.column("nota", width=100, anchor="center")
 
         sb2 = ttk.Scrollbar(der, orient="vertical", command=self.tree_notas.yview)
         self.tree_notas.configure(yscrollcommand=sb2.set)
+        self.tree_notas.grid(row=1, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        sb2.grid(row=1, column=1, sticky="ns", pady=(0, 10))
 
-        self.tree_notas.grid(row=1, column=0, sticky="nsew", padx=10, pady=10)
-        sb2.grid(row=1, column=1, sticky="ns", pady=10)
+        # ✅ Ajuste automático: 1/3 - 1/3 - 1/3 (al iniciar y al redimensionar)
+        self.tree_notas.bind("<Configure>", lambda e: self._ajustar_columnas_notas())
+        self.after(120, self._ajustar_columnas_notas)
 
-        # Doble click para editar la celda Nota
+        # Doble click para editar la columna Nota
         self.tree_notas.bind("<Double-1>", self.on_doble_click_nota)
 
-        # Botones y promedio
-        botones = ttk.Frame(der)
-        botones.grid(row=2, column=0, sticky="w", padx=10, pady=10)
+        # Selección para cargar panel
+        self.tree_notas.bind("<<TreeviewSelect>>", lambda e: self.on_select_evaluacion())
 
+        # Panel casillas
+        panel = ttk.LabelFrame(der, text="Ingreso de nota (casillas)")
+        panel.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 10))
+        panel.columnconfigure(1, weight=1)
+
+        ttk.Label(panel, text="Evaluación:").grid(row=0, column=0, sticky="w", padx=8, pady=6)
+        ttk.Entry(panel, textvariable=self.var_eval_nombre, state="readonly").grid(row=0, column=1, sticky="ew", padx=8, pady=6)
+
+        ttk.Label(panel, text="%:").grid(row=0, column=2, sticky="w", padx=8, pady=6)
+        ttk.Entry(panel, textvariable=self.var_eval_porcentaje, width=10, state="readonly").grid(row=0, column=3, sticky="w", padx=8, pady=6)
+
+        ttk.Label(panel, text="Nota:").grid(row=1, column=0, sticky="w", padx=8, pady=6)
+        ttk.Entry(panel, textvariable=self.var_nota, width=15).grid(row=1, column=1, sticky="w", padx=8, pady=6)
+
+        btns_panel = ttk.Frame(panel)
+        btns_panel.grid(row=1, column=2, columnspan=2, sticky="e", padx=8, pady=6)
+        ttk.Button(btns_panel, text="Guardar nota", command=self.on_guardar_nota_panel).pack(side="left", padx=5)
+        ttk.Button(btns_panel, text="Limpiar", command=self.on_limpiar_panel).pack(side="left", padx=5)
+
+        botones = ttk.Frame(der)
+        botones.grid(row=3, column=0, sticky="w", padx=10, pady=6)
         ttk.Button(botones, text="Guardar todo (leer tabla)", command=self.on_guardar_todo).pack(side="left", padx=5)
         ttk.Button(botones, text="Recalcular promedio", command=self.on_recalcular).pack(side="left", padx=5)
 
-        self.lbl_prom = ttk.Label(der, text="Promedio ponderado: -", font=("Segoe UI", 11))
-        self.lbl_prom.grid(row=3, column=0, sticky="w", padx=10, pady=10)
+        self.lbl_prom = ttk.Label(der, text="Promedio ponderado: 0.00", font=("Segoe UI", 11))
+        self.lbl_prom.grid(row=4, column=0, sticky="w", padx=10, pady=10)
+
+    # ---------------------------------------------------------
+    # Helpers: evaluacion_id desde el iid
+    # ---------------------------------------------------------
+    def _eval_id_seleccionado(self):
+        sel = self.tree_notas.selection()
+        if not sel:
+            return None
+        try:
+            return int(sel[0])  # iid = evaluacion_id
+        except Exception:
+            return None
+
+    def _seleccionar_eval_por_id(self, evaluacion_id: int):
+        iid = str(int(evaluacion_id))
+        if iid in self.tree_notas.get_children():
+            self.tree_notas.selection_set(iid)
+            self.tree_notas.focus(iid)
+            self.tree_notas.see(iid)
+            self.on_select_evaluacion()
+
+    def _seleccionar_primera_eval(self):
+        items = self.tree_notas.get_children()
+        if items:
+            self.tree_notas.selection_set(items[0])
+            self.tree_notas.focus(items[0])
+            self.tree_notas.see(items[0])
+            self.on_select_evaluacion()
 
     # ---------------------------------------------------------
     # Cursos
     # ---------------------------------------------------------
     def _cargar_cursos(self):
         self._cursos = listar_cursos_detallados()
-
         display = []
         for c in self._cursos:
-            txt = f"{c['universidad_nombre']} | {c['carrera_nombre']} | Sem {c['semestre']} | {c['curso_nombre']}"
+            txt = f"{c['universidad_nombre']} | {c['carrera_nombre']} | Periodo {c['periodo']} | {c['curso_nombre']}"
             if c.get("codigo"):
                 txt += f" ({c['codigo']})"
             display.append(txt)
@@ -194,15 +257,14 @@ class VentanaNotas(tk.Toplevel):
         self.curso_sel = int(info["curso_id"])
         self.inscripcion_sel = None
 
-        # Mostrar suma % para advertir si no llega a 100
         s = suma_porcentajes(self.curso_sel)
-        self.lbl_suma.config(text=f"Suma %: {s:.2f}", foreground=("green" if abs(s - 100) < 0.001 else "red"))
+        self.lbl_suma.config(text=f"Suma %: {s:.2f}")
 
         self._refrescar_inscritos()
         self._limpiar_notas()
 
     # ---------------------------------------------------------
-    # Inscritos (lista izquierda)
+    # Inscritos
     # ---------------------------------------------------------
     def _refrescar_inscritos(self):
         for i in self.tree_insc.get_children():
@@ -212,23 +274,14 @@ class VentanaNotas(tk.Toplevel):
             return
 
         ins = listar_inscritos_por_curso(self.curso_sel)
-
         for r in ins:
             alumno = f"{r.get('apellidos','')} {r.get('nombres','')}".strip()
             prom = float(r.get("promedio_ponderado") or 0)
             s = float(r.get("suma_porcentajes") or 0)
-
             self.tree_insc.insert(
                 "",
                 "end",
-                values=(
-                    r.get("inscripcion_id", ""),
-                    r.get("rut", ""),
-                    alumno,
-                    r.get("email", "") or "",
-                    f"{prom:.2f}",
-                    f"{s:.2f}",
-                ),
+                values=(r["inscripcion_id"], r["rut"], alumno, r.get("email") or "", f"{prom:.2f}", f"{s:.2f}"),
             )
 
     def on_select_inscrito(self):
@@ -236,128 +289,156 @@ class VentanaNotas(tk.Toplevel):
         if not sel:
             return
         vals = self.tree_insc.item(sel[0], "values")
-        if not vals:
-            return
 
         self.inscripcion_sel = int(vals[0])
         self.lbl_alumno.config(text=f"{vals[2]} (RUT: {vals[1]})")
 
         self._cargar_notas_en_tabla()
+        self._seleccionar_primera_eval()
         self.on_recalcular()
 
     # ---------------------------------------------------------
-    # Tabla única de notas (derecha)
+    # Notas
     # ---------------------------------------------------------
     def _limpiar_notas(self):
         for i in self.tree_notas.get_children():
             self.tree_notas.delete(i)
+
         self.lbl_alumno.config(text="Seleccione un alumno inscrito.")
-        self.lbl_prom.config(text="Promedio ponderado: -")
+        self.lbl_prom.config(text="Promedio ponderado: 0.00")
+        self.on_limpiar_panel()
 
     def _cargar_notas_en_tabla(self):
-        self._limpiar_notas()
-
         if self.inscripcion_sel is None:
+            self._limpiar_notas()
             return
+
+        eval_sel = self._eval_id_seleccionado()
+
+        for i in self.tree_notas.get_children():
+            self.tree_notas.delete(i)
 
         filas = obtener_notas_por_inscripcion(self.inscripcion_sel)
 
         for f in filas:
+            eval_id = int(f["evaluacion_id"])
+            nombre = f["nombre"]
+            porcentaje = float(f["porcentaje"])
+            nota = float(f.get("nota") or 0)
+
             self.tree_notas.insert(
                 "",
                 "end",
-                values=(
-                    int(f["evaluacion_id"]),
-                    f["nombre"],
-                    f"{float(f['porcentaje']):.2f}",
-                    f"{float(f.get('nota') or 0):.2f}",
-                ),
+                iid=str(eval_id),
+                values=(nombre, f"{porcentaje:.2f}", f"{nota:.2f}"),
             )
 
-    # ---------------------------------------------------------
-    # Edición in-place: doble click sobre columna "Nota"
-    # ---------------------------------------------------------
-    def on_doble_click_nota(self, event):
-        # Si no hay inscripción seleccionada, no se edita
+        if eval_sel is not None:
+            self._seleccionar_eval_por_id(eval_sel)
+
+        # Re-ajustar columnas (por si el tree todavía no se ajustó)
+        self.after(1, self._ajustar_columnas_notas)
+
+    def on_select_evaluacion(self):
+        sel = self.tree_notas.selection()
+        if not sel:
+            return
+
+        iid = sel[0]
+        vals = self.tree_notas.item(iid, "values")
+        self.var_eval_nombre.set(vals[0] if len(vals) > 0 else "")
+        self.var_eval_porcentaje.set(vals[1] if len(vals) > 1 else "")
+        self.var_nota.set(vals[2] if len(vals) > 2 else "")
+
+    def on_guardar_nota_panel(self):
         if self.inscripcion_sel is None:
+            messagebox.showwarning("Atención", "Seleccione un alumno inscrito.")
             return
 
-        # Identificar fila y columna clickeada
-        row_id = self.tree_notas.identify_row(event.y)
-        col = self.tree_notas.identify_column(event.x)
-
-        # Columnas:
-        # #1 eval_id (oculta)
-        # #2 evaluacion
-        # #3 porcentaje
-        # #4 nota  <-- queremos editar esta
-        if col != "#4" or not row_id:
+        eval_id = self._eval_id_seleccionado()
+        if eval_id is None:
+            messagebox.showwarning("Atención", "Seleccione una evaluación.")
             return
 
-        # Obtenemos la caja (bbox) de esa celda para posicionar el Entry encima
-        bbox = self.tree_notas.bbox(row_id, col)
-        if not bbox:
-            return
-        x, y, w, h = bbox
-
-        # Si existe un editor anterior, lo destruimos
-        if self._editor_entry is not None:
-            self._editor_entry.destroy()
-
-        # Valor actual de la celda Nota
-        valor_actual = self.tree_notas.set(row_id, "nota")
-
-        # Creamos un Entry encima de la celda
-        self._editor_entry = ttk.Entry(self.tree_notas)
-        self._editor_entry.place(x=x, y=y, width=w, height=h)
-        self._editor_entry.insert(0, valor_actual)
-        self._editor_entry.focus()
-
-        # Guardamos referencias para saber qué editar
-        self._editor_item = row_id
-        self._editor_col = "nota"
-
-        # Confirmar con Enter o al perder foco
-        self._editor_entry.bind("<Return>", lambda e: self._commit_edicion())
-        self._editor_entry.bind("<FocusOut>", lambda e: self._commit_edicion())
-
-    def _commit_edicion(self):
-        """Confirma la edición del Entry y guarda la nota en BD."""
-        if self._editor_entry is None or self._editor_item is None:
-            return
-
-        nuevo_valor = self._editor_entry.get().strip()
-        if nuevo_valor == "":
-            nuevo_valor = "0"
-
-        # Validación + guardado
         try:
-            nota = float(nuevo_valor)
-
-            # evaluacion_id está en la fila
-            eval_id = int(self.tree_notas.set(self._editor_item, "eval_id"))
-
-            # Guardar en BD
+            nota = float(self.var_nota.get().strip() or "0")
             guardar_nota(self.inscripcion_sel, eval_id, nota)
 
-            # Reflejar en tabla con formato 2 decimales
-            self.tree_notas.set(self._editor_item, "nota", f"{nota:.2f}")
+            self._cargar_notas_en_tabla()
+            self._seleccionar_eval_por_id(eval_id)
 
-            # Actualizar promedio y lista izquierda
             self._refrescar_inscritos()
             self.on_recalcular()
 
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
-        # Destruir el editor
+    def on_limpiar_panel(self):
+        self.var_eval_nombre.set("")
+        self.var_eval_porcentaje.set("")
+        self.var_nota.set("")
+
+    # ---------------------------------------------------------
+    # Doble click para editar "Nota" en la tabla
+    # ---------------------------------------------------------
+    def on_doble_click_nota(self, event):
+        if self.inscripcion_sel is None:
+            return
+
+        row_id = self.tree_notas.identify_row(event.y)
+        col = self.tree_notas.identify_column(event.x)
+
+        # En este Treeview hay 3 columnas visibles:
+        # #1 evaluacion, #2 porcentaje, #3 nota
+        if col != "#3" or not row_id:
+            return
+
+        bbox = self.tree_notas.bbox(row_id, col)
+        if not bbox:
+            return
+
+        x, y, w, h = bbox
+
+        if self._editor_entry is not None:
+            self._editor_entry.destroy()
+
+        valor_actual = self.tree_notas.set(row_id, "nota")
+
+        self._editor_entry = ttk.Entry(self.tree_notas)
+        self._editor_entry.place(x=x, y=y, width=w, height=h)
+        self._editor_entry.insert(0, valor_actual)
+        self._editor_entry.focus()
+
+        self._editor_item = row_id
+
+        self._editor_entry.bind("<Return>", lambda e: self._commit_edicion())
+        self._editor_entry.bind("<FocusOut>", lambda e: self._commit_edicion())
+
+    def _commit_edicion(self):
+        if self._editor_entry is None or self._editor_item is None:
+            return
+
+        try:
+            eval_id = int(self._editor_item)
+            nota = float(self._editor_entry.get().strip() or "0")
+
+            guardar_nota(self.inscripcion_sel, eval_id, nota)
+
+            self._cargar_notas_en_tabla()
+            self._seleccionar_eval_por_id(eval_id)
+
+            self._refrescar_inscritos()
+            self.on_recalcular()
+
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
+
         self._editor_entry.destroy()
         self._editor_entry = None
         self._editor_item = None
-        self._editor_col = None
 
     # ---------------------------------------------------------
-    # Guardar todo (lee todas las filas de la tabla y persiste)
+    # Guardar todo
     # ---------------------------------------------------------
     def on_guardar_todo(self):
         if self.inscripcion_sel is None:
@@ -365,14 +446,15 @@ class VentanaNotas(tk.Toplevel):
             return
 
         try:
-            for item in self.tree_notas.get_children():
-                eval_id = int(self.tree_notas.set(item, "eval_id"))
-                nota_str = self.tree_notas.set(item, "nota").strip()
-                if nota_str == "":
-                    nota_str = "0"
+            for iid in self.tree_notas.get_children():
+                eval_id = int(iid)
+                nota_str = self.tree_notas.set(iid, "nota").strip() or "0"
                 guardar_nota(self.inscripcion_sel, eval_id, float(nota_str))
 
-            messagebox.showinfo("OK", "Notas guardadas (tabla completa).")
+            self._cargar_notas_en_tabla()
+            self._seleccionar_primera_eval()
+
+            messagebox.showinfo("OK", "Notas guardadas.")
             self._refrescar_inscritos()
             self.on_recalcular()
 
@@ -385,19 +467,9 @@ class VentanaNotas(tk.Toplevel):
     def on_recalcular(self):
         if self.inscripcion_sel is None:
             return
-
         p = obtener_promedio_inscripcion(self.inscripcion_sel)
-        if not p:
-            self.lbl_prom.config(text="Promedio ponderado: -")
-            return
-
-        prom = float(p.get("promedio_ponderado") or 0)
-        suma = float(p.get("suma_porcentajes") or 0)
-
-        if abs(suma - 100.0) > 0.001:
-            self.lbl_prom.config(text=f"Promedio (⚠ suma %={suma:.2f}): {prom:.2f}")
-        else:
-            self.lbl_prom.config(text=f"Promedio ponderado: {prom:.2f}")
+        prom = float((p or {}).get("promedio_ponderado") or 0)
+        self.lbl_prom.config(text=f"Promedio ponderado: {prom:.2f}")
 
     # ---------------------------------------------------------
     # Inscribir / desinscribir
@@ -443,7 +515,6 @@ class VentanaNotas(tk.Toplevel):
             vals = tree.item(sel[0], "values")
             alumno_id = int(vals[0])
 
-            # Evitar duplicado
             if obtener_inscripcion(alumno_id, self.curso_sel):
                 messagebox.showwarning("Atención", "El alumno ya está inscrito en este curso.")
                 return
@@ -475,21 +546,14 @@ class VentanaNotas(tk.Toplevel):
             messagebox.showerror("Error", str(e))
 
     # ---------------------------------------------------------
-    # Exportación completa (TODAS las notas)
+    # Exportación
     # ---------------------------------------------------------
     def on_exportar_excel(self):
         if self.curso_sel is None:
             messagebox.showwarning("Atención", "Seleccione un curso.")
             return
-
         try:
-            # Reporte completo (evaluaciones + notas de todos)
             rep = obtener_reporte_notas_por_curso(self.curso_sel)
-            evaluaciones = rep["evaluaciones"]
-            filas = rep["filas"]
-
-            curso_info = self._curso_info()
-
             ruta = filedialog.asksaveasfilename(
                 title="Guardar Excel",
                 defaultextension=".xlsx",
@@ -498,10 +562,8 @@ class VentanaNotas(tk.Toplevel):
             )
             if not ruta:
                 return
-
-            exportar_notas_curso_excel(ruta, curso_info, evaluaciones, filas)
-            messagebox.showinfo("OK", "Excel exportado con todas las notas.")
-
+            exportar_notas_curso_excel(ruta, self._curso_info(), rep["evaluaciones"], rep["filas"])
+            messagebox.showinfo("OK", "Excel exportado.")
         except Exception as e:
             messagebox.showerror("Error", str(e))
 
@@ -509,14 +571,8 @@ class VentanaNotas(tk.Toplevel):
         if self.curso_sel is None:
             messagebox.showwarning("Atención", "Seleccione un curso.")
             return
-
         try:
             rep = obtener_reporte_notas_por_curso(self.curso_sel)
-            evaluaciones = rep["evaluaciones"]
-            filas = rep["filas"]
-
-            curso_info = self._curso_info()
-
             ruta = filedialog.asksaveasfilename(
                 title="Guardar PDF",
                 defaultextension=".pdf",
@@ -525,9 +581,7 @@ class VentanaNotas(tk.Toplevel):
             )
             if not ruta:
                 return
-
-            exportar_notas_curso_pdf(ruta, curso_info, evaluaciones, filas)
-            messagebox.showinfo("OK", "PDF exportado con todas las notas.")
-
+            exportar_notas_curso_pdf(ruta, self._curso_info(), rep["evaluaciones"], rep["filas"])
+            messagebox.showinfo("OK", "PDF exportado.")
         except Exception as e:
             messagebox.showerror("Error", str(e))

@@ -1,8 +1,3 @@
-# ============================================
-# modulos/ui_evaluaciones.py
-# Ventana 3: evaluaciones + porcentajes por curso
-# ============================================
-
 import tkinter as tk
 from tkinter import ttk, messagebox
 
@@ -86,10 +81,10 @@ class VentanaEvaluaciones(tk.Toplevel):
 
     def _cargar_cursos(self):
         self._cursos = listar_cursos_detallados()
-        # Display amigable
+
         display = []
         for c in self._cursos:
-            txt = f"{c['universidad_nombre']} | {c['carrera_nombre']} | Sem {c['semestre']} | {c['curso_nombre']}"
+            txt = f"{c['universidad_nombre']} | {c['carrera_nombre']} | Periodo {c['periodo']} | {c['curso_nombre']}"
             if c.get("codigo"):
                 txt += f" ({c['codigo']})"
             display.append(txt)
@@ -124,11 +119,7 @@ class VentanaEvaluaciones(tk.Toplevel):
             self.tree.insert("", "end", values=(e["evaluacion_id"], e["nombre"], f"{float(e['porcentaje']):.2f}"))
 
         s = suma_porcentajes(self.curso_sel)
-        self.lbl_suma.config(text=f"Suma %: {s:.2f}")
-        if abs(s - 100.0) < 0.001:
-            self.lbl_suma.config(foreground="green")
-        else:
-            self.lbl_suma.config(foreground="red")
+        self.lbl_suma.config(text=f"Suma %: {s:.2f}", foreground=("green" if abs(s - 100.0) < 0.001 else "red"))
 
     def on_select(self):
         sel = self.tree.selection()

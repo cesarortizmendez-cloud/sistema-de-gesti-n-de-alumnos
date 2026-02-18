@@ -1,6 +1,7 @@
 # ============================================
 # modulos/repo_inscripciones.py
 # Inscribir alumnos a cursos + listar inscritos
+# (actualizado: alumno.periodo en vez de alumno.semestre)
 # ============================================
 
 from typing import Any, Dict, List, Optional
@@ -13,7 +14,6 @@ def _fila_a_dict(fila) -> Dict[str, Any]:
 
 
 def inscribir_alumno(alumno_id: int, curso_id: int) -> int:
-    """Crea inscripción alumno-curso y retorna inscripcion_id."""
     conn = obtener_conexion()
     try:
         cur = conn.cursor()
@@ -30,7 +30,6 @@ def inscribir_alumno(alumno_id: int, curso_id: int) -> int:
 
 
 def desinscribir(inscripcion_id: int) -> bool:
-    """Elimina inscripción (borra notas por cascada)."""
     conn = obtener_conexion()
     try:
         cur = conn.cursor()
@@ -46,7 +45,7 @@ def desinscribir(inscripcion_id: int) -> bool:
 
 def listar_inscritos_por_curso(curso_id: int) -> List[Dict[str, Any]]:
     """
-    Lista alumnos inscritos en un curso, incluyendo promedio ponderado (vista).
+    Lista alumnos inscritos + promedio ponderado (vista).
     """
     conn = obtener_conexion()
     try:
@@ -55,7 +54,8 @@ def listar_inscritos_por_curso(curso_id: int) -> List[Dict[str, Any]]:
             """
             SELECT
                 i.inscripcion_id,
-                a.alumno_id, a.rut, a.nombres, a.apellidos, a.email, a.semestre, a.estado,
+                a.alumno_id, a.rut, a.nombres, a.apellidos, a.email,
+                a.periodo, a.estado,
                 vp.promedio_ponderado, vp.suma_porcentajes
             FROM inscripciones i
             JOIN alumnos a ON a.alumno_id = i.alumno_id
@@ -71,7 +71,6 @@ def listar_inscritos_por_curso(curso_id: int) -> List[Dict[str, Any]]:
 
 
 def obtener_inscripcion(alumno_id: int, curso_id: int) -> Optional[Dict[str, Any]]:
-    """Devuelve la inscripción si existe."""
     conn = obtener_conexion()
     try:
         cur = conn.cursor()
