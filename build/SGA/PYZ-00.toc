@@ -855,42 +855,6 @@
    'C:\\Users\\Cesar\\Desktop\\SGA '
    'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\config.py',
    'PYMODULE'),
-  ('modulos.exportaciones',
-   'C:\\Users\\Cesar\\Desktop\\SGA '
-   'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\exportaciones.py',
-   'PYMODULE'),
-  ('modulos.repo_alumnos',
-   'C:\\Users\\Cesar\\Desktop\\SGA '
-   'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\repo_alumnos.py',
-   'PYMODULE'),
-  ('modulos.repo_carreras',
-   'C:\\Users\\Cesar\\Desktop\\SGA '
-   'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\repo_carreras.py',
-   'PYMODULE'),
-  ('modulos.repo_cursos',
-   'C:\\Users\\Cesar\\Desktop\\SGA '
-   'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\repo_cursos.py',
-   'PYMODULE'),
-  ('modulos.repo_evaluaciones',
-   'C:\\Users\\Cesar\\Desktop\\SGA '
-   'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\repo_evaluaciones.py',
-   'PYMODULE'),
-  ('modulos.repo_inscripciones',
-   'C:\\Users\\Cesar\\Desktop\\SGA '
-   'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\repo_inscripciones.py',
-   'PYMODULE'),
-  ('modulos.repo_logs',
-   'C:\\Users\\Cesar\\Desktop\\SGA '
-   'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\repo_logs.py',
-   'PYMODULE'),
-  ('modulos.repo_notas',
-   'C:\\Users\\Cesar\\Desktop\\SGA '
-   'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\repo_notas.py',
-   'PYMODULE'),
-  ('modulos.repo_universidades',
-   'C:\\Users\\Cesar\\Desktop\\SGA '
-   'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\repo_universidades.py',
-   'PYMODULE'),
   ('modulos.ui_alumnos',
    'C:\\Users\\Cesar\\Desktop\\SGA '
    'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\ui_alumnos.py',
@@ -910,10 +874,6 @@
   ('modulos.ui_principal',
    'C:\\Users\\Cesar\\Desktop\\SGA '
    'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\ui_principal.py',
-   'PYMODULE'),
-  ('modulos.validaciones',
-   'C:\\Users\\Cesar\\Desktop\\SGA '
-   'proyecto\\sistema-de-gesti-n-de-alumnos\\modulos\\validaciones.py',
    'PYMODULE'),
   ('multiprocessing',
    'C:\\Users\\Cesar\\AppData\\Local\\Programs\\Python\\Python314\\Lib\\multiprocessing\\__init__.py',

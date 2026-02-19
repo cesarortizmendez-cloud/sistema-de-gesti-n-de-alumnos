@@ -1,0 +1,45 @@
+# ============================================
+# .gitignore - Proyecto SGA (Python + Tkinter + SQLite + PyInstaller)
+# ============================================
+
+# --- Entornos virtuales ---
+.venv/
+env/
+venv/
+ENV/
+
+# --- Python cache ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Logs ---
+*.log
+
+# --- VS Code / IDEs ---
+.vscode/
+.idea/
+*.swp
+
+# --- Windows ---
+Thumbs.db
+Desktop.ini
+
+# --- PyInstaller ---
+build/
+dist/
+*.spec
+
+# --- Exportaciones del sistema ---
+exports/
+*.xlsx
+*.pdf
+
+# --- Base de datos local ---
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Otros ---
+.DS_Store
